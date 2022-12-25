@@ -1,0 +1,265 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Список пользователей</title>
+    <link
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+
+    <style>
+      .modal_shell {
+        width: 100vw;
+        height: 100vh;
+        position: fixed;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        top: 0;
+        left: 0;
+        display: flex;
+        transform: scale(0);
+      }
+
+      .modal_overlay {
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.5);
+        position: absolute;
+        z-index: 2;
+      }
+
+      .modals {
+        width: 30vw;
+        height: 50vh;
+        border-radius: 20px;
+        background-color: #ccc;
+        padding: 30px;
+        position: relative;
+        top: 0;
+        left: 0;
+        z-index: 5;
+        transform: scale(0);
+        animation: FromScale 0.5s forwards;
+      }
+
+      .hide {
+        display: none !important;
+      }
+
+      @keyframes FromScale {
+        0%{
+          transform: scale(0);
+        }
+        100%{
+          transform: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Список пользователей</h2>
+    <form name="userForm" id="createUserForm">
+      <input type="hidden" id="id-field" name="id" value="0" />
+      <div class="form-group">
+        <label for="name">Имя:</label>
+        <input class="form-control" name="name" id="userName" />
+      </div>
+      <div class="form-group">
+        <label for="age">Возраст:</label>
+        <input class="form-control" name="age" id="userAge" />
+      </div>
+      <div class="panel-body">
+        <button type="submit" class="btn btn-sm btn-primary">Сохранить</button>
+        <a id="reset" class="btn btn-sm btn-primary">Сбросить</a>
+      </div>
+    </form>
+
+    <table class="table table-condensed table-striped table-bordered">
+      <thead>
+        <tr>
+          <th>Id</th>
+          <th>Имя</th>
+          <th>возраст</th>
+          <th></th>
+        </tr>
+      </thead>
+
+      <tbody></tbody>
+    </table>
+
+    <div class="modal_shell hide">
+      <div class="modal_overlay"></div>
+      <div class="modals">
+        <form id="change-form">
+          <input
+            type="text"
+            id="change-name"
+            name="changeName"
+            placeholder="Type your name"
+          />
+          <hr />
+          <input
+            type="text"
+            id="change-age"
+            name="changeAge"
+            placeholder="Type your age"
+          />
+          <hr />
+          <button>Press</button>
+        </form>
+      </div>
+    </div>
+
+    <script>
+      const createUserFormEl = document.getElementById("createUserForm");
+      const userAgeEl = document.getElementById("userAge");
+      const userNameEl = document.getElementById("userName");
+      const resetBtnEl = document.getElementById("reset");
+      const userChangeFormEl = document.getElementById("change-form");
+      const changeUserNameEl = document.getElementById("change-name");
+      const changeUserAgeEl = document.getElementById("change-age");
+
+
+
+      const modalShellEl = document.querySelector(".modal_shell");
+      const modalOverlayEl = document.querySelector(".modal_overlay");
+      const tableBodyEl = document.querySelector("tbody");
+
+      const apiUrl = "/api/users";
+      let userId = null
+
+      const getUsers = async () => {
+        const response = await fetch(apiUrl);
+        const users = await response.json();
+
+        let usersTemplate = "";
+
+        for (let user of users) {
+          usersTemplate += row(user);
+        }
+
+        tableBodyEl.innerHTML = usersTemplate;
+      };
+
+      const createUser = async (name, age) => {
+        const options = {
+          method: "POST",
+          headers: {
+            "Content-type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({ name, age }),
+        };
+        const response = await fetch(apiUrl, options);
+        const newUser = await response.json();
+
+        tableBodyEl.innerHTML += row(newUser);
+        ;
+      };
+
+      const onSubmit = (event) => {
+        event.preventDefault();
+
+
+if (
+          !userNameEl.value ,
+          !userNameEl.value.trim() ,
+          userAgeEl.value === "" ||
+          !userAgeEl.value.trim()
+        ) {
+          userAgeEl.style.border = "1px solid red";
+          userNameEl.style.border = "1px solid red";
+          return;
+        }
+
+        createUser(userNameEl.value, +userAgeEl.value);
+        userAgeEl.style.border = "1px solid #ccc";
+        userNameEl.style.border = "1px solid #ccc";
+      };
+
+      getUsers();
+
+      const onResetForm = () => {
+        createUserFormEl.reset()
+      }
+      const changeUser = async (name, age, id) => {
+        const options = {
+          method: "PUT",
+          headers: {
+            "Content-type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({ name, age, id }),
+        };
+        await fetch(apiUrl, options)
+        await getUsers();
+      }
+      const onEditUser = (event) =>{
+        const {dataset} = event.target;
+        if(dataset.action === "edit"){
+          console.log("clicked");
+          userId= dataset.id;
+          modalShellEl.classList.remove("hide");
+        }
+      }
+      const onModalOverlayClick = () => {
+        modalShellEl.classList.add("hide");
+        userId = null
+      }
+
+      const onChangeUserFormSubmit = (event) =>{
+        event.preventDefault();
+        console.log("work");
+        const userNameValue = changeUserNameEl.value;
+        const userAgeValue = changeUserAgeEl.value;
+
+        changeUser(userNameValue, userAgeValue, userId).then(()=>{
+          getUsers();
+          modalShellEl.classList.add("hide")
+          userChangeFormEl.reset()
+        })
+      }
+      console.log(userChangeFormEl);
+
+      createUserFormEl.addEventListener("submit", onSubmit);
+      resetBtnEl.addEventListener('click', onResetForm )
+      tableBodyEl.addEventListener('click', onEditUser)
+      modalOverlayEl.addEventListener('click', onModalOverlayClick)
+      userChangeFormEl.addEventListener('submit', onChangeUserFormSubmit)
+
+
+
+      function row(user) {
+        const renderUser = `
+          <tr id="${user.id}">
+            <td>${user.id}</td>
+            <td>${user.name}</td>
+            <td>${user.age}</td>
+            <td>
+              <a href="javascript:void(0)" data-action="edit" data-id="${user.id}">Изменить</a>  
+              <a href="javascript:void(0)" id = "${user.id+1}"class="id" >Удалить</a>
+              </td>
+          </tr>
+        `;
+ 
+        return renderUser;
+      }
+      
+const deletID = (event)=>{
+window.teg = event.target
+if(teg.classList = "id"){
+  console.log(teg.id-1);
+fetch(`${apiUrl}/${teg.id -1}`,{ method :"DELETE"})
+teg.parentElement.parentElement.remove()
+}
+
+}
+
+tableBodyEl.addEventListener("click", deletID)
+    </script>
+  </body>
+</html>
